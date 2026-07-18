@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>FinanceBox - Controle de Caixa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <!-- Chart.js para gráfico profissional -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo">
+        <span class="logo-icon">FB</span>
+        <span class="logo-text">FinanceBox</span>
+      </div>
+      <nav class="menu">
+        <a href="#" class="menu-item active">Dashboard</a>
+        <a href="#" class="menu-item">Lançamentos</a>
+        <a href="#" class="menu-item">Relatórios</a>
+      </nav>
+      <div class="sidebar-footer">
+        <small>Controle de Caixa • Versão 1.0</small>
+      </div>
+    </aside>
+
+    <!-- Conteúdo principal -->
+    <main class="main">
+      <!-- Top bar -->
+      <header class="topbar">
+        <div>
+          <h1>Controle de Caixa</h1>
+          <p>Visão geral financeira da empresa</p>
+        </div>
+        <div class="topbar-filtro">
+          <label>Período:</label>
+          <input type="month" id="filtroMesGlobal">
+        </div>
+      </header>
+
+      <!-- Cards de resumo -->
+      <section class="cards">
+        <div class="card card-saldo">
+          <h2>Saldo atual</h2>
+          <p class="valor" id="cardSaldo">R$ 0,00</p>
+          <small>Considerando todas as entradas e saídas</small>
+        </div>
+        <div class="card card-entrada">
+          <h2>Total de entradas</h2>
+          <p class="valor" id="cardEntradas">R$ 0,00</p>
+          <small>Receitas no período selecionado</small>
+        </div>
+        <div class="card card-saida">
+          <h2>Total de saídas</h2>
+          <p class="valor" id="cardSaidas">R$ 0,00</p>
+          <small>Despesas no período selecionado</small>
+        </div>
+        <div class="card card-inicial">
+          <h2>Caixa inicial</h2>
+          <p class="valor" id="cardInicial">R$ 0,00</p>
+          <small>Valor configurado no início</small>
+        </div>
+      </section>
+
+      <!-- Linha de conteúdo: formulário + gráfico -->
+      <section class="linha">
+        <!-- Formulário de lançamento -->
+        <div class="box">
+          <h2>Novo lançamento</h2>
+
+          <form id="formInicial" class="form-inline">
+            <label for="valorInicial">Caixa inicial:</label>
+            <input type="number" id="valorInicial" step="0.01" placeholder="Ex: 5000,00">
+            <button type="submit">Definir</button>
+          </form>
+
+          <form id="formLancamento" class="form">
+            <div class="form-grid">
+              <div>
+                <label for="data">Data</label>
+                <input type="date" id="data" required>
+              </div>
+              <div>
+                <label for="tipo">Tipo</label>
+                <select id="tipo" required>
+                  <option value="entrada">Entrada</option>
+                  <option value="saida">Saída</option>
+                </select>
+              </div>
+              <div>
+                <label for="categoria">Categoria</label>
+                <select id="categoria">
+                  <option value="vendas">Vendas</option>
+                  <option value="servicos">Serviços</option>
+                  <option value="salarios">Salários</option>
+                  <option value="custos_fixos">Custos fixos</option>
+                  <option value="outros">Outros</option>
+                </select>
+              </div>
+              <div>
+                <label for="valor">Valor</label>
+                <input type="number" id="valor" step="0.01" required>
+              </div>
+            </div>
+
+            <label for="descricao">Descrição</label>
+            <input type="text" id="descricao" placeholder="Ex: Venda à vista, aluguel, energia etc.">
+
+            <button type="submit" class="btn-primary">Salvar lançamento</button>
+          </form>
+        </div>
+
+        <!-- Gráfico -->
+        <div class="box">
+          <h2>Entradas x saídas por mês</h2>
+          <canvas id="graficoMensal"></canvas>
+        </div>
+      </section>
+
+      <!-- Tabela de lançamentos -->
+      <section class="box">
+        <div class="tabela-header">
+          <h2>Lançamentos do caixa</h2>
+          <div class="tabela-filtros">
+            <label>Filtrar por dia:</label>
+            <input type="date" id="filtroData">
+            <label>Filtrar por mês:</label>
+            <input type="month" id="filtroMes">
+            <button id="btnLimparFiltros">Limpar filtros</button>
+          </div>
+        </div>
+
+        <table class="tabela" id="tabela">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Tipo</th>
+              <th>Categoria</th>
+              <th>Descrição</th>
+              <th>Valor</th>
+              <th>Saldo após</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+
+        <div class="tabela-resumo">
+          <p>Saída total do dia selecionado: <span id="totalDia">R$ 0,00</span></p>
+          <p>Saída total do mês selecionado: <span id="totalMes">R$ 0,00</span></p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
