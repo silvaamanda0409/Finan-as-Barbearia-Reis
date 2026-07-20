@@ -1,7 +1,14 @@
+// ------------------------
+// Estado principal
+// ------------------------
+
 let saldoInicial = 0;
 let saldoAtual = 0;
-const lancamentos = [];
 
+// Carrega lançamentos salvos (Barbearia Reis) ou começa vazio
+let lancamentos = JSON.parse(localStorage.getItem('lancamentosReis')) || [];
+
+// Referências de elementos
 const formInicial = document.getElementById('formInicial');
 const formLancamento = document.getElementById('formLancamento');
 const tabelaBody = document.querySelector('#tabela tbody');
@@ -18,16 +25,54 @@ const totalDiaEl = document.getElementById('totalDia');
 const totalMesEl = document.getElementById('totalMes');
 const btnLimparFiltros = document.getElementById('btnLimparFiltros');
 
+// Se não tiver período selecionado, usa o mês atual
+if (!filtroMesGlobalEl.value) {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+  filtroMesGlobalEl.value = `${ano}-${mes}`;
+}
+
+// ------------------------
+// Utilidades
+// ------------------------
+
 function formatarReais(valor) {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function salvarLancamentos() {
+  localStorage.setItem('lancamentosReis', JSON.stringify(lancamentos));
+}
+
+// ------------------------
+// Caixa inicial
+// ------------------------
+
 formInicial.addEventListener('submit', function (e) {
   e.preventDefault();
   saldoInicial = parseFloat(document.getElementById('valorInicial').value) || 0;
+
+  // Recalcula saldo atual para o mês selecionado
+  const mesGlobal = filtroMesGlobalEl.value;
   saldoAtual = saldoInicial;
+
+  lancamentos.forEach(l => {
+    if (l.mesRef !== mesGlobal) return;
+    if (l.tipo === 'entrada') {
+      saldoAtual += l.valor;
+    } else {
+      saldoAtual -= l.valor;
+    }
+  });
+
   atualizarResumo();
+  renderTabela();
 });
+
+// ------------------------
+// Novo lançamento
+// ------------------------
 
 formLancamento.addEventListener('submit', function (e) {
   e.preventDefault();
@@ -43,28 +88,49 @@ formLancamento.addEventListener('submit', function (e) {
     return;
   }
 
-  const lancamento = { data, tipo, categoria, descricao, valor };
+  const mesAtual = filtroMesGlobalEl.value; // AAAA-MM
+
+  const lancamento = {
+    data,      // AAAA-MM-DD
+    tipo,      // "entrada" ou "saida"
+    categoria,
+    descricao,
+    valor,
+    mesRef: mesAtual
+  };
+
   lancamentos.push(lancamento);
 
+  // Atualiza saldo do mês corrente
   if (tipo === 'entrada') {
     saldoAtual += valor;
   } else {
     saldoAtual -= valor;
   }
 
+  salvarLancamentos();
   renderTabela();
   atualizarResumo();
   atualizarGraficoMensal();
   formLancamento.reset();
 });
 
+// ------------------------
+// Tabela e resumos
+// ------------------------
+
 function renderTabela() {
   tabelaBody.innerHTML = "";
 
-  let diaFiltro = filtroDataEl.value;
-  let mesFiltro = filtroMesEl.value;
+  const diaFiltro = filtroDataEl.value;   // AAAA-MM-DD
+  const mesFiltro = filtroMesEl.value;    // AAAA-MM
+  const mesGlobal = filtroMesGlobalEl.value; // mês de caixa
 
   lancamentos.forEach(l => {
+    // Primeiro: respeita o mês de caixa selecionado
+    if (mesGlobal && l.mesRef !== mesGlobal) return;
+
+    // Depois: filtros adicionais
     if (diaFiltro && l.data !== diaFiltro) return;
     if (mesFiltro && !l.data.startsWith(mesFiltro)) return;
 
@@ -84,13 +150,18 @@ function renderTabela() {
 }
 
 function calcularSaldoApos(lancamentoAtual) {
+  const mesGlobal = filtroMesGlobalEl.value;
   let saldo = saldoInicial;
+
   for (const l of lancamentos) {
+    if (l.mesRef !== mesGlobal) continue;
+
     if (l.tipo === 'entrada') {
       saldo += l.valor;
     } else {
       saldo -= l.valor;
     }
+
     if (l === lancamentoAtual) break;
   }
   return saldo;
@@ -100,10 +171,10 @@ function atualizarResumo() {
   let totalEntradas = 0;
   let totalSaidas = 0;
 
-  let mesGlobal = filtroMesGlobalEl.value;
+  const mesGlobal = filtroMesGlobalEl.value;
 
   lancamentos.forEach(l => {
-    if (mesGlobal && !l.data.startsWith(mesGlobal)) return;
+    if (mesGlobal && l.mesRef !== mesGlobal) return;
 
     if (l.tipo === 'entrada') {
       totalEntradas += l.valor;
@@ -121,11 +192,14 @@ function atualizarResumo() {
 function calcularResumosDiaMes() {
   const dia = filtroDataEl.value;
   const mes = filtroMesEl.value;
+  const mesGlobal = filtroMesGlobalEl.value;
 
   let totalDia = 0;
   let totalMes = 0;
 
   lancamentos.forEach(l => {
+    if (mesGlobal && l.mesRef !== mesGlobal) return;
+
     if (dia && l.data === dia && l.tipo === 'saida') {
       totalDia += l.valor;
     }
@@ -138,6 +212,10 @@ function calcularResumosDiaMes() {
   totalMesEl.textContent = formatarReais(totalMes);
 }
 
+// ------------------------
+// Filtros
+// ------------------------
+
 filtroDataEl.addEventListener('change', () => {
   renderTabela();
 });
@@ -147,6 +225,17 @@ filtroMesEl.addEventListener('change', () => {
 });
 
 filtroMesGlobalEl.addEventListener('change', () => {
+  const mesGlobal = filtroMesGlobalEl.value;
+
+  // Recalcula saldo do mês selecionado
+  saldoAtual = saldoInicial;
+  lancamentos.forEach(l => {
+    if (l.mesRef !== mesGlobal) return;
+    if (l.tipo === 'entrada') saldoAtual += l.valor;
+    else saldoAtual -= l.valor;
+  });
+
+  renderTabela();
   atualizarResumo();
   atualizarGraficoMensal();
 });
@@ -157,7 +246,10 @@ btnLimparFiltros.addEventListener('click', () => {
   renderTabela();
 });
 
-/* Gráfico Chart.js Entradas x Saídas */
+// ------------------------
+// Gráfico Chart.js Entradas x Saídas por mês
+// ------------------------
+
 const ctx = document.getElementById('graficoMensal').getContext('2d');
 let graficoMensal = new Chart(ctx, {
   type: 'bar',
@@ -200,10 +292,12 @@ function atualizarGraficoMensal() {
   const mapaMeses = {};
 
   lancamentos.forEach(l => {
-    const mes = l.data.slice(0, 7); // AAAA-MM
+    const mes = l.mesRef || l.data.slice(0, 7);
+
     if (!mapaMeses[mes]) {
       mapaMeses[mes] = { entrada: 0, saida: 0 };
     }
+
     if (l.tipo === 'entrada') {
       mapaMeses[mes].entrada += l.valor;
     } else {
@@ -221,7 +315,10 @@ function atualizarGraficoMensal() {
   graficoMensal.update();
 }
 
-// Inicial
+// ------------------------
+// Inicialização
+// ------------------------
+
 renderTabela();
 atualizarResumo();
 atualizarGraficoMensal();
